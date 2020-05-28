@@ -1,104 +1,74 @@
 #include<iostream>
-#include<thread>
-#include<list>
-#include<mutex>   
-#include<iostream>
-#include<memory>
-#include<condition_variable>
-#include<vector>
 #include<string>
-#include"json.hpp"
-using json = nlohmann::json;
+#include <stdio.h>
+#define CURL_STATICLIB
+#include"curl/curl.h"
 
-std::mutex m3;
+#ifdef _DEBUG
+#	pragma comment(lib, "curl/libcurl_a.lib") 
+#else
+#	   pragma comment(lib, "curl/libcurl_a_debug.lib")
+#endif
+ 
 
-class Blocking_Queue
+int main(void) 
 {
-	std::list<std::string> msg_queue;
-	std::condition_variable cv1, cv2;
-	std::mutex m;
-	int max;
-public:
-	Blocking_Queue(int n) :max(n) {}
-	void push_back(const std::string& s);
-	std::string pop_front();
-};
+	CURL *curl;			// CURL = void 
+	CURLcode res;		// CURLcode je enum
 
-void Blocking_Queue::push_back(const std::string& s)
-{
-	std::unique_lock<std::mutex> ul1(m);
-	cv1.wait(ul1, [&]() { return msg_queue.size() < max; });
-	msg_queue.push_back(s);
-	cv2.notify_all();
-}
-
-std::string Blocking_Queue::pop_front()
-{
-	std::unique_lock<std::mutex> ul2(m);
-	cv2.wait(ul2, [&]() { return msg_queue.size() > 0; });
-	std::string temp = *msg_queue.begin();
-	msg_queue.pop_front();
-	cv1.notify_all();
-	return temp;
-}
-
-//---------------------------------------------------------------//
-
-Blocking_Queue bq(100);
-
-
-void Produce()
-{
-	while (true)
+	curl = curl_easy_init();  // create an easy handle (Start a libcurl easy session)  UVEK SE PRVA POZIVA
+	if (curl) 
 	{
-		json j = { { "a",rand() % 10 }, { "b",rand() % 10 } };
-		bq.push_back(j.dump());
-	}
-}
+		curl_easy_setopt(curl, CURLOPT_URL, "https://jsonplaceholder.typicode.com/todos/1"); // set options for a curl easy handle --> tell libcurl how to behave
+																							 // (HANDLE ON CURL, OPTION, PARAMETAR)
+		
+		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);         // example.com is redirected, so we tell libcurl to follow redirection
 
-void Consume()
-{
-	while (true)
-	{
-		auto parsed = json::parse(bq.pop_front());
-		int a = parsed["a"];
-		int b = parsed["b"];
-		std::cout << a + b << std::endl;
-	}
-}
+		
+		res = curl_easy_perform(curl);			//  perform a file transfer synchronously, Perform the request, res will get the return code 
+												//  perform a blocking file transfer
+												//  performs the entire request in a blocking manner and returns when done  --> VRSI ISPIS NA KONZOLU
 
-
-int main()
-{
-	int num_producers = 4;
-	int num_consumers = 5;
-	std::vector<std::thread> producers;
-	std::vector<std::thread> consumers;
-
-
-	for (int i = 0; i < num_producers; i++)
-	{
-		producers.emplace_back(std::thread(Produce));
-	}
-
-	for (int i = 0; i < num_consumers; i++)
-	{
-		consumers.emplace_back(std::thread(Consume));
-	}
-
-	for (int i = 0; i < num_producers; i++)
-	{
-		if (producers[i].joinable())
-		{
-			producers[i].join();
+		if (res != CURLE_OK)					// AKO JE CURLE_OK = 0 --> All fine. Proceed as usual
+		{ 
+			fprintf(stderr, "curl_easy_perform() failed: %s\n",			// (STREAM,FORMAT,SOURCE)
+				curl_easy_strerror(res));								// return string describing error code
 		}
+
+		curl_easy_cleanup(curl);  // ODGOVARA NA FUNKCIJU curl_easy_init();  --> end a libcurl easy handle
+								  // This function must be the last function to call for an easy session
+								  // It is the opposite of the curl_easy_init function 
+								  // must be called with the same handle as input that a curl_easy_init call returned.
 	}
-	for (int i = 0; i < num_consumers; i++)
-	{
-		if (consumers[i].joinable())
-		{
-			consumers[i].join();
-		}
-	}
+	return 0;
 }
 
+//
+//int main(void)
+//{
+//	CURL *curl;
+//	CURLcode res;
+//
+//	static const char *postthis = "moo mooo moo moo";
+//
+//	curl = curl_easy_init();
+//	if (curl) {
+//		curl_easy_setopt(curl, CURLOPT_URL, "https://jsonplaceholder.typicode.com/posts/1");
+//		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postthis);                                 // specify data to POST to serve
+//
+//		/* if we don't provide POSTFIELDSIZE, libcurl will strlen() by
+//		   itself */
+//		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(postthis));              // size of POST data pointed to
+//		       
+//		/* Perform the request, res will get the return code */
+//		res = curl_easy_perform(curl);
+//		/* Check for errors */
+//		if (res != CURLE_OK)
+//			fprintf(stderr, "curl_easy_perform() failed: %s\n",
+//				curl_easy_strerror(res));
+//
+//		/* always cleanup */
+//		curl_easy_cleanup(curl);
+//	}
+//	return 0;
+//}
