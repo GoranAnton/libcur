@@ -24,16 +24,17 @@ static size_t my_write(void* buffer, size_t size, size_t nmemb, std::string* par
 
 int main()
 {
-	std::string result; 
+	std::string result;
 	CURL* curl;
 	CURLcode res;
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 	curl = curl_easy_init();
 	if (curl)
 	{
-		curl_easy_setopt(curl, CURLOPT_URL, "https://jsonplaceholder.typicode.com/todos/1");
+		curl_easy_setopt(curl, CURLOPT_URL, "https://reqres.in/api/users");
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "name=morpheus&job=leader");		// sve podatke koji stignu sa servera salje u my_write funkciju
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, my_write);		// sve podatke koji stignu sa servera salje u my_write funkciju
- 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);				// setovanje param argumenta iz my_write funkcije (param=&result)
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);				// setovanje param argumenta iz my_write funkcije (param=&result)
 		res = curl_easy_perform(curl);
 		if (CURLE_OK != res)
 		{
