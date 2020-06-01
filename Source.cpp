@@ -74,7 +74,7 @@ int main()
 	if (curl)
 	{			
 		struct curl_slist *chunk = NULL;  // zadavanje hedera
-		chunk = curl_slist_append(chunk, "application:json");
+		chunk = curl_slist_append(chunk, "Content-Type : application/json");
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
 		curl_easy_setopt(curl, CURLOPT_URL, "https://reqres.in/api/users");    // zadavanje URL
